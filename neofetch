@@ -6540,7 +6540,7 @@ ${c2}             ..........
 EOF
         ;;
 
-    "CBL-Mariner"*)
+    "CBL-Mariner"* | "Azure Linux"*)
         set_colors 6
         read -rd '' ascii_data <<'EOF'
 ${c1}                    .
