@@ -1915,13 +1915,16 @@ get_de() {
     # TODO:
     #  - New config option + flag: --de_display_server on/off ?
     #  - Add display of X11, Arcan and anything else relevant.
-    [[ $de && $DISPLAY ]] && 
-        de+=" (X11)"
-        
-    [[ $de && $WAYLAND_DISPLAY ]] &&
-        de+=" (Wayland)"
-
-    de_run=1
+    if [[ $de ]]; then
+    	if [[ $DISPLAY && -z $WAYLAND_DISPLAY ]]; then
+    	    de+=" (X11)"
+    	elif [[ $WAYLAND_DISPLAY && -z $DISPLAY ]]; then
+    	    de+=" (Wayland)"
+    	elif [[ $WAYLAND_DISPLAY && $DISPLAY ]]; then
+	    de+=" (Wayland)"
+    	fi
+    	    de_run=1
+    fi
 }
 
 get_wm() {
