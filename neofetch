@@ -1915,6 +1915,10 @@ get_de() {
     # TODO:
     #  - New config option + flag: --de_display_server on/off ?
     #  - Add display of X11, Arcan and anything else relevant.
+    if [[ "$de" =~ [Hh]yprland ]]; then
+        de=""
+    fi
+
     if [[ $de ]]; then
     	if [[ $DISPLAY && -z $WAYLAND_DISPLAY ]]; then
     	    de+=" (X11)"
@@ -2057,6 +2061,14 @@ get_wm() {
     [[ $wm == *GNOME*Shell* ]] && wm=Mutter
 
     wm_run=1
+    if pgrep -x "Hyprland" >/dev/null 2>&1; then
+        local hyprver
+        hyprver=$(hyprctl version 2>/dev/null | awk -F'[:,]' '/Tag:/ {gsub(/ /,"",$2); print $2}')
+        [[ -z "$hyprver" ]] && hyprver=$(hyprctl version 2>/dev/null | grep -o 'v[0-9.]\+' | head -n1)
+        hyprver="${hyprver#v}"
+        wm="Hyprland${hyprver:+ $hyprver} ($XDG_SESSION_TYPE)"
+    return
+fi
 }
 
 get_wm_theme() {
