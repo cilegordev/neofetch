@@ -63,7 +63,6 @@ print_info() {
     info "$(color 7)├ \n\n \n$(color 1)OS" distro
     #info "Host" model
     info "$(color 7)├ \n \n$(color 4)Kernel" kernel
-    info "$(color 7)├ \n \n$(color 4)Uptime" uptime
     info "$(color 7)├ \n \n$(color 4)Packages" packages
     info "$(color 7)├ \n \n$(color 4)Shell" shell
     info "$(color 7)├ \n \n$(color 4)Resolution" resolution
@@ -73,7 +72,7 @@ print_info() {
     info "$(color 7)├ \n \n$(color 4)Icons" icons
     info "$(color 7)├ \n \n$(color 4)Window Manager" wm_theme
     info "$(color 7)├ \n \n$(color 4)Terminal" term
-    info "$(color 7)├ \n \n$(color 4)Terminal Font" term_font
+    #info term_font
     info "$(color 7)├ \n \n$(color 4)CPU" cpu
     info "$(color 7)├ \n \n$(color 4)GPU" gpu
     info "$(color 7)├ \n \n$(color 4)RAM" memory
@@ -361,7 +360,7 @@ gpu_type="all"
 # Example:
 # on:  '1920x1080 @ 60Hz'
 # off: '1920x1080'
-refresh_rate="off"
+refresh_rate="on"
 
 
 # Gtk Theme / Icons / Font
@@ -1921,11 +1920,11 @@ get_de() {
 
     if [[ $de ]]; then
     	if [[ $DISPLAY && -z $WAYLAND_DISPLAY ]]; then
-    	    de+=" (X11)"
+    	    de+=" ($XDG_SESSION_TYPE)"
     	elif [[ $WAYLAND_DISPLAY && -z $DISPLAY ]]; then
-    	    de+=" (Wayland)"
+    	    de+=" ($XDG_SESSION_TYPE)"
     	elif [[ $WAYLAND_DISPLAY && $DISPLAY ]]; then
-	    de+=" (Wayland)"
+	    de+=" ($XDG_SESSION_TYPE)"
     	fi
     	    de_run=1
     fi
@@ -3129,7 +3128,14 @@ get_resolution() {
         ;;
 
         *)
-            if type -p xrandr >/dev/null && [[ $DISPLAY && -z $WAYLAND_DISPLAY ]]; then
+            if [[ -n $WAYLAND_DISPLAY ]] && type -p hyprctl >/dev/null; then
+                raw_res="$(hyprctl monitors | awk '/^[ \t]+[0-9]+x[0-9]+@[0-9]/ {print $1; exit}')"
+                width_height="${raw_res%@*}"                # 1440x900
+                refresh_raw="${raw_res#*@}"                 # 75.00000
+                refresh_fmt=$(printf "%.2f" "$refresh_raw") # 75.00
+                resolution="${width_height} @ ${refresh_fmt}Hz"
+                [[ "$refresh_rate" == "off" ]] && resolution="$width_height"
+            elif type -p xrandr >/dev/null && [[ $DISPLAY && -z $WAYLAND_DISPLAY ]]; then
                 case $refresh_rate in
                     "on")
                         resolution="$(xrandr --nograb --current |\
@@ -3149,8 +3155,7 @@ get_resolution() {
                 resolution="${resolution//\*}"
 
             elif type -p xwininfo >/dev/null && [[ $DISPLAY && -z $WAYLAND_DISPLAY ]]; then
-                read -r w h \
-                    <<< "$(xwininfo -root | awk -F':' '/Width|Height/ {printf $2}')"
+                read -r w h <<< "$(xwininfo -root | awk -F':' '/Width|Height/ {printf $2}')"
                 resolution="${w}x${h}"
 
             elif type -p xdpyinfo >/dev/null && [[ $DISPLAY && -z $WAYLAND_DISPLAY ]]; then
@@ -3159,7 +3164,6 @@ get_resolution() {
             elif [[ -d /sys/class/drm ]]; then
                 for dev in /sys/class/drm/*/modes; do
                     read -r single_resolution _ < "$dev"
-
                     [[ $single_resolution ]] && resolution="${single_resolution}, ${resolution}"
                 done
             fi
