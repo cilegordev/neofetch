@@ -1666,6 +1666,7 @@ get_packages() {
             has flatpak && tot flatpak list
             has spm     && tot spm list -i
             has puyo    && dir ~/.puyo/installed
+            has snap && ps -e | grep -qFm 1 snapd >/dev/null && pkgs_h=1 tot snap list && ((packages-=1))
 
             # Snap hangs if the command is run without the daemon running.
             # Only run snap if the daemon is also running.
@@ -1723,6 +1724,24 @@ get_packages() {
         ;;
     esac
 
+    # Azure Linux fallback
+    if [[ -z "$packages" || "$packages" == "0" ]]; then
+        if type -p sqlite3 >/dev/null; then
+            for db in /var/lib/rpm/rpmdb.sqlite /var/lib/dnf/rpmdb.sqlite; do
+                if [[ -f "$db" ]]; then
+                    packages="$(sqlite3 "$db" 'SELECT COUNT(*) FROM Name')"
+                    manager="rpm"
+                    break
+                fi
+            done
+        fi
+
+        if [[ -z "$packages" || "$packages" == "0" ]]; then
+            packages="$(rpm -qa | wc -l)"
+            manager="rpm"
+        fi
+    fi
+
     if ((packages == 0)); then
         unset packages
 
@@ -1732,6 +1751,11 @@ get_packages() {
 
     elif [[ $package_managers == tiny ]]; then
         packages+=" (${manager_string%,*})"
+    fi
+
+    # Azure Linux fallback
+    if [[ "$distro" == "Azure Linux"* ]]; then
+        packages="${packages/(*)/(rpm)}"
     fi
 
     packages=${packages/pacman-key/pacman}
@@ -1914,6 +1938,7 @@ get_de() {
     # TODO:
     #  - New config option + flag: --de_display_server on/off ?
     #  - Add display of X11, Arcan and anything else relevant.
+    # Azure Linux fallback
     if [[ "$de" =~ [Hh]yprland ]]; then
         de=""
     fi
@@ -2060,6 +2085,7 @@ get_wm() {
     [[ $wm == *GNOME*Shell* ]] && wm=Mutter
 
     wm_run=1
+    # Azure Linux fallback
     if pgrep -x "Hyprland" >/dev/null 2>&1; then
         local hyprver
         hyprver=$(hyprctl version 2>/dev/null | awk -F'[:,]' '/Tag:/ {gsub(/ /,"",$2); print $2}')
@@ -3128,6 +3154,7 @@ get_resolution() {
         ;;
 
         *)
+        # Azure Linux fallback
             if [[ -n $WAYLAND_DISPLAY ]] && type -p hyprctl >/dev/null; then
                 raw_res="$(hyprctl monitors | awk '/^[ \t]+[0-9]+x[0-9]+@[0-9]/ {print $1; exit}')"
                 width_height="${raw_res%@*}"                # 1440x900
@@ -3155,6 +3182,7 @@ get_resolution() {
                 resolution="${resolution//\*}"
 
             elif type -p xwininfo >/dev/null && [[ $DISPLAY && -z $WAYLAND_DISPLAY ]]; then
+                # Azure Linux fallback
                 read -r w h <<< "$(xwininfo -root | awk -F':' '/Width|Height/ {printf $2}')"
                 resolution="${w}x${h}"
 
@@ -3164,6 +3192,7 @@ get_resolution() {
             elif [[ -d /sys/class/drm ]]; then
                 for dev in /sys/class/drm/*/modes; do
                     read -r single_resolution _ < "$dev"
+
                     [[ $single_resolution ]] && resolution="${single_resolution}, ${resolution}"
                 done
             fi
