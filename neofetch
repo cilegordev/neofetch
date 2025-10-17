@@ -1164,11 +1164,10 @@ get_distro() {
                 10.14*) codename="macOS Mojave" ;;
                 10.15*) codename="macOS Catalina" ;;
                 10.16*) codename="macOS Big Sur" ;;
-                11.*)   codename="macOS Big Sur" ;;
-                12.*)   codename="macOS Monterey" ;;
-                13.*)   codename="macOS Ventura" ;;
-                14.*)   codename="macOS Sonoma" ;;
-                15.*)   codename="macOS Sequoia";;
+                10.17*)   codename="macOS Monterey" ;;
+                10.18*)   codename="macOS Ventura" ;;
+                10.19*)   codename="macOS Sonoma" ;;
+                10.20*)   codename="macOS Sequoia";;
                 *)      codename=macOS ;;
             esac
 
@@ -1666,11 +1665,10 @@ get_packages() {
             has flatpak && tot flatpak list
             has spm     && tot spm list -i
             has puyo    && dir ~/.puyo/installed
-            has snap && ps -e | grep -qFm 1 snapd >/dev/null && pkgs_h=1 tot snap list && ((packages-=1))
 
             # Snap hangs if the command is run without the daemon running.
             # Only run snap if the daemon is also running.
-            has snap && ps -e | grep -qFm 1 snapd >/dev/null && \
+            has snap    && ps -e | grep -qFm 1 snapd >/dev/null && \
             pkgs_h=1 tot snap list && ((packages-=1))
 
             # This is the only standard location for appimages.
@@ -3157,9 +3155,9 @@ get_resolution() {
         # Azure Linux fallback
             if [[ -n $WAYLAND_DISPLAY ]] && type -p hyprctl >/dev/null; then
                 raw_res="$(hyprctl monitors | awk '/^[ \t]+[0-9]+x[0-9]+@[0-9]/ {print $1; exit}')"
-                width_height="${raw_res%@*}"                # 1440x900
-                refresh_raw="${raw_res#*@}"                 # 75.00000
-                refresh_fmt=$(printf "%.2f" "$refresh_raw") # 75.00
+                width_height="${raw_res%@*}"
+                refresh_raw="${raw_res#*@}"
+                refresh_fmt=$(printf "%.2f" "$refresh_raw")
                 resolution="${width_height} @ ${refresh_fmt}Hz"
                 [[ "$refresh_rate" == "off" ]] && resolution="$width_height"
             elif type -p xrandr >/dev/null && [[ $DISPLAY && -z $WAYLAND_DISPLAY ]]; then
