@@ -6564,6 +6564,33 @@ ${c1}                    .
 EOF
         ;;
 
+    "Azure Linux"*)
+        set_colors 4 4 6 12 15
+        read -rd '' ascii_data <<'EOF'
+${c4}		fffffffffff             
+              ${c4}fffffffffffffff${c2}iiiii      
+             ${c4}fffffffffff${c2};;;iiiiiii      
+            ${c4}fffffffff${c2};;;;;;;iiii        
+           ${c4}ffffffff${c2};;;;;;;;;iii         
+          ${c4}fffffffff${c2};;;;;;;;;;ii         
+          ${c4}ffffffff${c2};;;;;;;;;;;ii         
+         ${c4}fffffffff${c2};;;;;;;;;;iii         
+         ${c4}ffffffff${c2};;;;;;;;;;;iiii        
+        ${c4}ffffffffff${c2};;;;;;;;;iiiiii       
+        ${c4}fffffffffff${c2};;;;;;;;iiiiiiii      
+       ${c4}11111111${c5}##############${c2}iiiiiii    
+      ${c4}1111111${c5}##################${c2}iiiiii   
+     ${c4}1111111${c5}####################${c2}iiiiii  
+    ${c4}1111111${c5}######################${c2}iiiiii 
+    ${c4}111111${c5}#######################${c2}iiiiiii 
+   ${c4}1111111${c5}########################${c2}iiiiii
+   ${c4}111111${c5}##########################${c2}iiiii
+  ${c4}111111${c5}###########################${c2}iiiii
+  ${c4}111111${c5}############################${c2}iii 
+ ${c4}111111${c5}#############################i${c2}i  
+EOF
+        ;;
+
         "CelOS"*)
             set_colors 4 6 0 5
             read -rd '' ascii_data <<'EOF'
