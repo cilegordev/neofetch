@@ -1844,9 +1844,13 @@ get_de() {
                 de=Regolith
 
             elif [[ $XDG_CURRENT_DESKTOP ]]; then
-                de=${XDG_CURRENT_DESKTOP/X\-}
-                de=${de/Budgie:GNOME/Budgie}
-                de=${de/:Unity7:ubuntu}
+                if [[ ${XDG_CURRENT_DESKTOP,,} == *hyprland* ]]; then
+                    unset -v de
+                else
+                    de=${XDG_CURRENT_DESKTOP/X\-}
+                    de=${de/Budgie:GNOME/Budgie}
+                    de=${de/:Unity7:ubuntu}
+                fi
 
             elif [[ $DESKTOP_SESSION ]]; then
                 de=${DESKTOP_SESSION##*/}
@@ -1915,8 +1919,19 @@ get_de() {
     # TODO:
     #  - New config option + flag: --de_display_server on/off ?
     #  - Add display of X11, Arcan and anything else relevant.
-    [[ $de && $WAYLAND_DISPLAY ]] &&
-        de+=" (Wayland)"
+    if [[ $de ]]; then
+        session_type=${XDG_SESSION_TYPE:-}
+
+        if [[ $session_type ]]; then
+            session_type=$(printf '%s' "$session_type" | tr '[:upper:]' '[:lower:]')
+        elif [[ $WAYLAND_DISPLAY ]]; then
+            session_type=$XDG_SESSION_TYPE
+        elif [[ $DISPLAY ]]; then
+            session_type=$XDG_SESSION_TYPE
+        fi
+
+        [[ $session_type ]] && de+=" (${session_type})"
+    fi
 
     de_run=1
 }
@@ -1925,10 +1940,23 @@ get_wm() {
     # If function was run, stop here.
     ((wm_run == 1)) && return
 
+    wm_display=
+
     case $kernel_name in
         *OpenBSD*) ps_flags=(x -c) ;;
         *)         ps_flags=(-e) ;;
     esac
+
+    if [[ $DESKTOP_SESSION == *hyprland* || $XDG_CURRENT_DESKTOP == *hyprland* ]]; then
+        wm=Hyprland
+
+        if type -p hyprctl >/dev/null; then
+            wm_version=$(hyprctl version 2>/dev/null | awk -F': ' '/^Tag:/ {print $2; exit}' | cut -d, -f1)
+        fi
+
+        session_type=$(printf '%s' "${XDG_SESSION_TYPE:-wayland}" | tr '[:upper:]' '[:lower:]')
+        wm_display="hyprland${wm_version:+ $wm_version} (${session_type})"
+    fi
 
     if [[ -O "${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY:-wayland-0}" ]]; then
         if tmp_pid="$(lsof -t "${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY:-wayland-0}" 2>&1)" ||
@@ -4605,7 +4633,10 @@ info() {
     [[ "$prin" ]] && return
 
     # Update the variable.
-    if [[ "$2" ]]; then
+    if [[ "$2" == wm && $wm_display ]]; then
+        output="$(trim "$wm_display")"
+
+    elif [[ "$2" ]]; then
         output="$(trim "${!2}")"
     else
         output="$(trim "${!1}")"
