@@ -1701,6 +1701,24 @@ get_packages() {
         ;;
     esac
 
+    # Azure Linux fallback
+    if [[ -z "$packages" || "$packages" == "0" ]]; then
+        if type -p sqlite3 >/dev/null; then
+            for db in /var/lib/rpm/rpmdb.sqlite /var/lib/dnf/rpmdb.sqlite; do
+                if [[ -f "$db" ]]; then
+                    packages="$(sqlite3 "$db" 'SELECT COUNT(*) FROM Name')"
+                    manager="rpm"
+                    break
+                fi
+            done
+        fi
+
+        if [[ -z "$packages" || "$packages" == "0" ]]; then
+            packages="$(rpm -qa | wc -l)"
+            manager="rpm"
+        fi
+    fi
+
     if ((packages == 0)); then
         unset packages
 
@@ -1710,6 +1728,11 @@ get_packages() {
 
     elif [[ $package_managers == tiny ]]; then
         packages+=" (${manager_string%,*})"
+    fi
+
+    # Azure Linux fallback
+    if [[ "$distro" == "Azure Linux"* ]]; then
+        packages="${packages/(*)/(rpm)}"
     fi
 
     packages=${packages/pacman-key/pacman}
