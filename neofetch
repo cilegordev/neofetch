@@ -28,7 +28,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-version=7.1.0
+version=7.1.1
 
 # Fallback to a value of '5' for shells which support bash
 # but do not set the 'BASH_' shell variables (osh).
@@ -433,6 +433,13 @@ local_ip_interface=('auto')
 # Values:  'on', 'off'
 # Flag:    --de_version
 de_version="on"
+
+# Show the display server (X11, Wayland, Arcan, etc.) alongside the DE
+#
+# Default: 'on'
+# Values:  'on', 'off'
+# Flag:    --de_display_server
+de_display_server="on"
 
 
 # Disk
@@ -1916,18 +1923,28 @@ get_de() {
         de+=" $de_ver"
     fi
 
-    # TODO:
-    #  - New config option + flag: --de_display_server on/off ?
-    #  - Add display of X11, Arcan and anything else relevant.
-    if [[ $de ]]; then
-        session_type=${XDG_SESSION_TYPE:-}
+    if [[ $de_display_server == on && $de ]]; then
+        local session_type
 
-        if [[ $session_type ]]; then
-            session_type=$(printf '%s' "$session_type" | tr '[:upper:]' '[:lower:]')
-        elif [[ $WAYLAND_DISPLAY ]]; then
-            session_type=$XDG_SESSION_TYPE
-        elif [[ $DISPLAY ]]; then
-            session_type=$XDG_SESSION_TYPE
+        # 1. Prefer the authoritative env var set by login managers / compositors.
+        if [[ ${XDG_SESSION_TYPE-} ]]; then
+            session_type=$(printf '%s' "$XDG_SESSION_TYPE" | tr '[:upper:]' '[:lower:]')
+
+        # 2. Arcan: check for the Arcan display server socket / env var before X11.
+        elif [[ ${ARCAN_CONNPATH-} || ${ARCAN_ARG_PIPE-} ]]; then
+            session_type="arcan"
+
+        # 3. Wayland: compositor sets WAYLAND_DISPLAY.
+        elif [[ ${WAYLAND_DISPLAY-} ]]; then
+            session_type="wayland"
+
+        # 4. X11: classic DISPLAY variable.
+        elif [[ ${DISPLAY-} ]]; then
+            session_type="x11"
+
+        # 5. Mir (Ubuntu / IoT).
+        elif [[ ${MIR_SOCKET-} ]]; then
+            session_type="mir"
         fi
 
         [[ $session_type ]] && de+=" (${session_type})"
@@ -1954,8 +1971,12 @@ get_wm() {
             wm_version=$(hyprctl version 2>/dev/null | awk -F': ' '/^Tag:/ {print $2; exit}' | cut -d, -f1)
         fi
 
-        session_type=$(printf '%s' "${XDG_SESSION_TYPE:-wayland}" | tr '[:upper:]' '[:lower:]')
-        wm_display="hyprland${wm_version:+ $wm_version} (${session_type})"
+        if [[ $de_display_server == on ]]; then
+            session_type=$(printf '%s' "${XDG_SESSION_TYPE:-wayland}" | tr '[:upper:]' '[:lower:]')
+            wm_display="hyprland${wm_version:+ $wm_version} (${session_type})"
+        else
+            wm_display="hyprland${wm_version:+ $wm_version}"
+        fi
     fi
 
     if [[ -O "${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY:-wayland-0}" ]]; then
@@ -5105,6 +5126,7 @@ INFO:
                                 NOTE: This only supports Linux.
 
     --de_version on/off         Show/Hide Desktop Environment version
+    --de_display_server on/off  Show/Hide display server (X11, Wayland, Arcan, Mir, etc.) next to DE
     --gtk_shorthand on/off      Shorten output of gtk theme/icons
     --gtk2 on/off               Enable/Disable gtk2 theme/font/icons output
     --gtk3 on/off               Enable/Disable gtk3 theme/font/icons output
@@ -5321,6 +5343,7 @@ get_args() {
             "--gpu_type") gpu_type="$2" ;;
             "--refresh_rate") refresh_rate="$2" ;;
             "--de_version") de_version="$2" ;;
+            "--de_display_server") de_display_server="$2" ;;
             "--gtk_shorthand") gtk_shorthand="$2" ;;
             "--gtk2") gtk2="$2" ;;
             "--gtk3") gtk3="$2" ;;
