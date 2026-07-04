@@ -1979,6 +1979,17 @@ get_wm() {
         fi
     fi
 
+    if [[ ${XDG_SESSION_DESKTOP-} == *tinywl* || ${DESKTOP_SESSION-} == *tinywl* || ${XDG_CURRENT_DESKTOP-} == *tinywl* ]]; then
+        wm=tinywl
+
+        if [[ $de_display_server == on ]]; then
+            session_type=$(printf '%s' "${XDG_SESSION_TYPE:-wayland}" | tr '[:upper:]' '[:lower:]')
+            wm_display="tinywl (${session_type})"
+        else
+            wm_display="tinywl"
+        fi
+    fi
+
     if [[ -O "${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY:-wayland-0}" ]]; then
         if tmp_pid="$(lsof -t "${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY:-wayland-0}" 2>&1)" ||
            tmp_pid="$(fuser   "${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY:-wayland-0}" 2>&1)"; then
